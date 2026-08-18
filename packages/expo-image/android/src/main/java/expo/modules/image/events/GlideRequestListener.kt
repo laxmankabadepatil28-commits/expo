@@ -88,9 +88,15 @@ class GlideRequestListener(
       // The observe check needs a real URL (`model.toString()`). An in-memory `DecodedModel` —
       // used when `source` is a `SharedRef<Drawable>`/`SharedRef<Bitmap>` instead of a URL.
       if (model !is DecodedModel) {
+        // The drawable may already be downsampled to the view size, so prefer the source
+        // dimensions recorded at decode time; an oversized source would otherwise never
+        // measure as oversized. Cache hits skip decoding and fall back to the drawable size.
+        val wrapperTarget = target as? ImageViewWrapperTarget
+        val sourceWidth = wrapperTarget?.sourceWidth?.takeIf { it > 0 } ?: intrinsicWidth
+        val sourceHeight = wrapperTarget?.sourceHeight?.takeIf { it > 0 } ?: intrinsicHeight
         appContext.registry
           .getModule<ExpoImageModule>()
-          ?.emitImageLoaded(model.toString(), intrinsicWidth, intrinsicHeight)
+          ?.emitImageLoaded(model.toString(), sourceWidth, sourceHeight)
       }
     }
 
