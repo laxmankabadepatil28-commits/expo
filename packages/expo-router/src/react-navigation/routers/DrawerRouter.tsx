@@ -187,8 +187,7 @@ export function DrawerRouter({
         case 'PUSH':
         case 'REPLACE':
         case 'JUMP_TO':
-        case 'NAVIGATE':
-        case 'NAVIGATE_DEPRECATED': {
+        case 'NAVIGATE': {
           const actionResult = router.getStateForAction(state, action, options);
 
           if (actionResult !== null) {

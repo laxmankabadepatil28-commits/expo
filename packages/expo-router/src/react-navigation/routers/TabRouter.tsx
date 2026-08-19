@@ -424,8 +424,7 @@ export function TabRouter({
         case 'PUSH':
         case 'REPLACE':
         case 'JUMP_TO':
-        case 'NAVIGATE':
-        case 'NAVIGATE_DEPRECATED': {
+        case 'NAVIGATE': {
           if (!state.routeNames.includes(action.payload.name)) {
             return null;
           }
@@ -454,11 +453,7 @@ export function TabRouter({
 
                 let params;
 
-                if (
-                  (action.type === 'NAVIGATE' || action.type === 'NAVIGATE_DEPRECATED') &&
-                  action.payload.merge &&
-                  currentId === nextId
-                ) {
+                if (action.type === 'NAVIGATE' && action.payload.merge && currentId === nextId) {
                   params =
                     action.payload.params !== undefined
                       ? {
