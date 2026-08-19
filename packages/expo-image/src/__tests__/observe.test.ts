@@ -299,6 +299,34 @@ describe('reportIfOversized', () => {
     expect(appMetrics.logEvent).not.toHaveBeenCalled();
   });
 
+  it('flags a query-stripped url with urlTruncated', () => {
+    const appMetrics = makeAppMetrics();
+
+    reportIfOversized(
+      state({ appMetrics }),
+      image(1000, 1000, 'https://example.com/a.png?token=1')
+    );
+
+    expect(appMetrics.logEvent.mock.calls[0][1].attributes.urlTruncated).toBe(true);
+  });
+
+  it('flags a credential-stripped url with urlTruncated even when includeUrlParams is enabled', () => {
+    const appMetrics = makeAppMetrics();
+    const s = state({ appMetrics, includeUrlParams: true });
+
+    reportIfOversized(s, image(1000, 1000, 'https://user:pass@example.com/a.png?w=4000'));
+
+    expect(appMetrics.logEvent.mock.calls[0][1].attributes.urlTruncated).toBe(true);
+  });
+
+  it('omits urlTruncated when the url is reported unchanged', () => {
+    const appMetrics = makeAppMetrics();
+
+    reportIfOversized(state({ appMetrics }), image(1000, 1000, 'https://example.com/a.png'));
+
+    expect(appMetrics.logEvent.mock.calls[0][1].attributes).not.toHaveProperty('urlTruncated');
+  });
+
   it('never reports data: urls', () => {
     const appMetrics = makeAppMetrics();
 
