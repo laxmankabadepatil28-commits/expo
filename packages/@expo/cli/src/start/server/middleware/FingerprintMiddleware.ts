@@ -74,23 +74,20 @@ export class FingerprintMiddleware extends ExpoMiddleware {
     }
 
     const platform = parsePlatformHeader(req);
-    if (!platform) {
-      res.statusCode = 400;
-      res.end(
-        JSON.stringify({
-          code: 'MISSING_PLATFORM',
-          error: 'A platform is required: pass ?platform= or the expo-platform header.',
-        })
-      );
-      return;
-    }
     if (platform !== 'android' && platform !== 'ios') {
       res.statusCode = 400;
       res.end(
-        JSON.stringify({
-          code: 'INVALID_PLATFORM',
-          error: `Unsupported platform: ${platform}. Use "android" or "ios".`,
-        })
+        JSON.stringify(
+          platform
+            ? {
+                code: 'INVALID_PLATFORM',
+                error: `Unsupported platform: ${platform}. Use "android" or "ios".`,
+              }
+            : {
+                code: 'MISSING_PLATFORM',
+                error: 'A platform is required: pass ?platform= or the expo-platform header.',
+              }
+        )
       );
       return;
     }

@@ -59,7 +59,7 @@ function notApplicable(reason: FingerprintCheckReason): FingerprintCheckResult {
  * not enough — the app must be rebuilt.
  *
  * The check is intended for development: it requires a development build connected to an Expo
- * dev server (SDK 55 or newer). The returned promise never rejects — environments where the
+ * dev server. The returned promise never rejects — environments where the
  * check does not apply produce a `not-applicable` result, and failures produce `check-failed`.
  *
  * @return A promise that resolves to the check result.

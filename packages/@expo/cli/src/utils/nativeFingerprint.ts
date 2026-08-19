@@ -174,6 +174,11 @@ export type PrebuildSourceChange = {
   /** Readable name of the fingerprint source, such as `app config` or `plugins/withFoo.js`. */
   source: string;
   change: 'added' | 'removed' | 'changed';
+  /**
+   * Whether the source belongs to the project or to an installed dependency. Only project
+   * sources are named in messages — see `formatPrebuildChanges`.
+   */
+  scope: 'project' | 'dependency';
 };
 
 export type PrebuildStaleness = {
@@ -256,12 +261,15 @@ export function getPrebuildStaleness({
       continue;
     }
     changes.push({
-      source: describeSourceKey(key),
+      ...describeSourceKey(key),
       change: before === undefined ? 'added' : after === undefined ? 'removed' : 'changed',
     });
   }
-  // Sort for a stable order across runs: source hash maps follow fingerprint traversal order.
-  changes.sort((a, b) => a.source.localeCompare(b.source));
+  // Stable order across runs (source hash maps follow fingerprint traversal order), with project
+  // sources first so the actionable ones survive message truncation.
+  changes.sort((a, b) =>
+    a.scope === b.scope ? a.source.localeCompare(b.source) : a.scope === 'project' ? -1 : 1
+  );
 
   return { status: changes.length ? 'stale' : 'fresh', changes };
 }
@@ -269,25 +277,41 @@ export function getPrebuildStaleness({
 /**
  * Name the changed sources for a message, so a stale verdict answers "what changed?" on the
  * spot. Long lists are truncated; the full list stays in the structured result.
+ *
+ * Only project sources are named. A dependency path points at code the developer did not write,
+ * and the remediation is the same either way, so naming it adds nothing to act on and invites a
+ * wrong conclusion. Returns an empty string when nothing nameable changed — callers must drop
+ * the clause rather than emit a sentence with a hole in it.
  */
 export function formatPrebuildChanges(changes: PrebuildSourceChange[], max: number = 3): string {
-  const named = changes.slice(0, max).map((change) => change.source);
-  const remaining = changes.length - named.length;
+  const project = changes.filter((change) => change.scope === 'project');
+  const named = project.slice(0, max).map((change) => change.source);
+  const remaining = project.length - named.length;
   return named.join(', ') + (remaining > 0 ? `, and ${remaining} more` : '');
 }
 
 /** Turn a `toSourceHashMap` key into something a developer can act on. */
-function describeSourceKey(key: string): string {
+function describeSourceKey(key: string): Pick<PrebuildSourceChange, 'source' | 'scope'> {
   const separatorIndex = key.indexOf(':');
   const type = key.slice(0, separatorIndex);
   const id = key.slice(separatorIndex + 1);
   if (type === 'contents') {
-    return id === 'expoConfig' ? 'app config' : id;
+    return { source: id === 'expoConfig' ? 'app config' : id, scope: 'project' };
   }
   if (type === 'package') {
-    return `package ${id}`;
+    return { source: `package ${id}`, scope: 'dependency' };
   }
-  return id;
+  return { source: id, scope: isDependencyPath(id) ? 'dependency' : 'project' };
+}
+
+/**
+ * Whether a fingerprint source path points outside the project. Paths are relative to the project
+ * root, so a leading `..` means a linked workspace package in a monorepo, and `node_modules` means
+ * an installed one.
+ */
+function isDependencyPath(filePath: string): boolean {
+  const segments = filePath.split(/[\\/]/);
+  return segments[0] === '..' || segments.includes('node_modules');
 }
 
 function toSourceHashMap(sources: FingerprintSource[]): Map<string, string> {
