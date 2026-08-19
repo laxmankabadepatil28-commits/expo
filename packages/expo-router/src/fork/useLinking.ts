@@ -23,16 +23,15 @@ type Options = LinkingOptions<ParamListBase>;
 
 export function useLinking(
   ref: RefObject<NavigationContainerRef<ParamListBase> | null>,
-  {
-    enabled = true,
-    prefixes,
-    config,
-    getInitialURL = getInitialURLWithTimeout,
-    getStateFromPath = getStateFromPathDefault,
-    getPathFromState = getPathFromStateDefault,
-  }: Options,
+  options: Options | undefined,
   onUnhandledLinking: (lastUnhandledLining: string | undefined) => void
 ) {
+  const enabled = options !== undefined;
+  const prefixes = options?.prefixes ?? [];
+  const config = options?.config;
+  const getInitialURL = options?.getInitialURL ?? getInitialURLWithTimeout;
+  const getStateFromPath = options?.getStateFromPath ?? getStateFromPathDefault;
+  const getPathFromState = options?.getPathFromState ?? getPathFromStateDefault;
   const independent = useNavigationIndependentTree();
   const store = useExpoRouterStore();
 
@@ -45,7 +44,7 @@ export function useLinking(
       return undefined;
     }
 
-    if (enabled !== false && linkingHandlers.length) {
+    if (enabled && linkingHandlers.length) {
       console.error(
         [
           'Looks like you have configured linking in multiple places. This is likely an error since deep links should only be handled in one place to avoid conflicts. Make sure that:',
@@ -59,7 +58,7 @@ export function useLinking(
 
     const handler = Symbol();
 
-    if (enabled !== false) {
+    if (enabled) {
       linkingHandlers.push(handler);
     }
 
